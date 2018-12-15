@@ -14,7 +14,7 @@ class getPulseApp(object):
 
     """
     Python application that finds a face in a webcam stream, then isolates the
-    forehead.
+    forehead. 
 
     Then the average green-light intensity in the forehead region is gathered
     over time, and the detected person's pulse is estimated.

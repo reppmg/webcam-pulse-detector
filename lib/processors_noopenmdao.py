@@ -204,6 +204,8 @@ class findFaceGetPulse(object):
             pfreq = freqs[idx]
             self.freqs = pfreq
             self.fft = pruned
+            if len(pruned) == 0:
+                return
             idx2 = np.argmax(pruned)
 
             t = (np.sin(phase[idx2]) + 1.) / 2.
