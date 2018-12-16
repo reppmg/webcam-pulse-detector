@@ -22,6 +22,7 @@ class findFaceGetPulse(object):
     def __init__(self, bpm_limits=[], data_spike_limit=250,
                  face_detector_smoothness=10):
 
+        self.percentile = 0.1
         self.frame_in = np.zeros((10, 10))
         self.frame_out = np.zeros((10, 10))
         self.fps = 0
@@ -37,6 +38,8 @@ class findFaceGetPulse(object):
         self.t0 = time.time()
         self.bpms = []
         self.bpm = 0
+        self.old_percentile_time = -1
+        self.percentile_bpm = 0
         dpath = resource_path("haarcascade_frontalface_alt.xml")
         if not os.path.exists(dpath):
             print("Cascade file not present!")
@@ -182,6 +185,8 @@ class findFaceGetPulse(object):
 
         processed = np.array(self.data_buffer)
         self.samples = processed
+        if self.old_percentile_time == -1:
+            self.old_percentile_time = self.times[0]
         if L > 10:
             self.output_dim = processed.shape[0]
 
@@ -229,12 +234,20 @@ class findFaceGetPulse(object):
             self.slices = [np.copy(self.frame_out[y1:y1 + h1, x1:x1 + w1, 1])]
             col = (100, 255, 100)
             gap = (self.buffer_size - L) / self.fps
-            # self.bpms.append(bpm)
+            self.bpms.append(self.bpm)
             # self.ttimes.append(time.time())
+
+            if self.times[-1] - self.old_percentile_time > 1:
+                sorted_bpms = np.sort(self.bpms)
+                trash_amount = int(self.percentile * np.alen(sorted_bpms))
+                percentiled_bpms = sorted_bpms[trash_amount:-trash_amount]
+                self.percentile_bpm = np.average(percentiled_bpms)
+                self.bpms.clear()
+                self.old_percentile_time = self.times[-1]
             if gap:
-                text = "(estimate: %0.1f bpm, wait %0.0f s)" % (self.bpm, gap)
+                text = "(est: %0.1f bpm, perc: %0.1f, wait %0.0f s)" % (self.bpm, self.percentile_bpm, gap)
             else:
-                text = "(estimate: %0.1f bpm)" % (self.bpm)
+                text = "(est: %0.1f bpm, perc: %0.1f)" % (self.bpm, self.percentile_bpm)
             tsize = 1
             cv2.putText(self.frame_out, text,
                        (int(x - w / 2), int(y)), cv2.FONT_HERSHEY_PLAIN, tsize, col)
