@@ -94,10 +94,15 @@ class getPulseApp(object):
         """
         Writes current data to a csv file
         """
+        fmt = "%.4f"
         fn = "Webcam-pulse" + str(datetime.datetime.now())
         fn = fn.replace(":", "_").replace(".", "_")
-        data = np.vstack((self.processor.times, self.processor.samples)).T
-        np.savetxt(fn + ".csv", data, delimiter=',')
+        data = np.vstack((self.processor.bpm_times, self.processor.bpm_history)).T
+        np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
+        fn = "Webcam-pulse-percentile" + str(datetime.datetime.now())
+        fn = fn.replace(":", "_").replace(".", "_")
+        data = np.vstack((self.processor.percentile_times, self.processor.percentile_bpm_history)).T
+        np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
         print("Writing csv")
 
     def toggle_search(self):

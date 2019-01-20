@@ -5,6 +5,8 @@ import pylab
 import os
 import sys
 
+PERCENTILE = 0.2
+
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -22,7 +24,8 @@ class findFaceGetPulse(object):
     def __init__(self, bpm_limits=[], data_spike_limit=250,
                  face_detector_smoothness=10):
 
-        self.percentile = 0.1
+        self.percentile = PERCENTILE
+        self.percentile_time_offset = 10
         self.frame_in = np.zeros((10, 10))
         self.frame_out = np.zeros((10, 10))
         self.fps = 0
@@ -37,9 +40,13 @@ class findFaceGetPulse(object):
         self.slices = [[0]]
         self.t0 = time.time()
         self.bpms = []
+        self.bpm_times = []
         self.bpm = 0
+        self.bpm_history = []
         self.old_percentile_time = -1
         self.percentile_bpm = 0
+        self.percentile_bpm_history = []
+        self.percentile_times = []
         dpath = resource_path("haarcascade_frontalface_alt.xml")
         if not os.path.exists(dpath):
             print("Cascade file not present!")
@@ -218,6 +225,9 @@ class findFaceGetPulse(object):
             alpha = t
             beta = 1 - t
 
+            if self.freqs[idx2] < 54:
+                return
+
             self.bpm = self.freqs[idx2]
             self.idx += 1
 
@@ -237,13 +247,17 @@ class findFaceGetPulse(object):
             self.bpms.append(self.bpm)
             # self.ttimes.append(time.time())
 
-            if self.times[-1] - self.old_percentile_time > 1:
+            if self.times[-1] - self.old_percentile_time > self.percentile_time_offset:
                 sorted_bpms = np.sort(self.bpms)
                 trash_amount = int(self.percentile * np.alen(sorted_bpms))
                 percentiled_bpms = sorted_bpms[trash_amount:-trash_amount]
                 self.percentile_bpm = np.average(percentiled_bpms)
                 self.bpms.clear()
+                self.percentile_times.append(self.times[-1])
+                self.percentile_bpm_history.append(self.percentile_bpm)
                 self.old_percentile_time = self.times[-1]
+            self.bpm_times.append(self.times[-1])
+            self.bpm_history.append(self.bpm)
             if gap:
                 text = "(est: %0.1f bpm, perc: %0.1f, wait %0.0f s)" % (self.bpm, self.percentile_bpm, gap)
             else:
