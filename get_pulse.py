@@ -2,6 +2,7 @@ from lib.device import Camera
 from lib.processors_noopenmdao import findFaceGetPulse
 from lib.interface import plotXY, imshow, waitKey, destroyWindow
 from cv2 import moveWindow
+import cv2 as cv
 import argparse
 import numpy as np
 import datetime
@@ -48,14 +49,15 @@ class getPulseApp(object):
             self.sock = socket.socket(socket.AF_INET, # Internet
                  socket.SOCK_DGRAM) # UDP
 
-        self.cameras = []
-        self.selected_cam = 0
-        for i in range(3):
-            camera = Camera(camera=i)  # first camera by default
-            if camera.valid or not len(self.cameras):
-                self.cameras.append(camera)
-            else:
-                break
+        # self.cameras = []
+        # self.selected_cam = 0
+        # for i in range(3):
+        #     camera = Camera(camera=i)  # first camera by default
+        #     if camera.valid or not len(self.cameras):
+        #         self.cameras.append(camera)
+        #     else:
+        #         break
+        self.source = cv.VideoCapture('m_n_1_crop.mp4')
         self.w, self.h = 0, 0
         self.pressed = 0
         # Containerized analysis of recieved image frames (an openMDAO assembly)
@@ -174,34 +176,45 @@ class getPulseApp(object):
         Single iteration of the application's main loop.
         """
         # Get current image frame from the camera
-        frame = self.cameras[self.selected_cam].get_frame()
-        self.h, self.w, _c = frame.shape
+        # frame = self.cameras[self.selected_cam].get_frame()
+        ret, frame = self.source.read()
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        cv.imshow('frame', gray)
 
-        # display unaltered frame
-        # imshow("Original",frame)
+        # self.h, self.w, _c = frame.shape
+        #
+        # # display unaltered frame
+        # # imshow("Original",frame)
+        #
+        # # set current image frame to the processor's input
+        # self.processor.frame_in = frame
+        # # process the image frame to perform all needed analysis
+        # self.processor.run(self.selected_cam)
+        # # collect the output frame for display
+        # output_frame = self.processor.frame_out
+        #
+        # # show the processed/annotated output frame
+        # imshow("Processed", output_frame)
+        #
+        # # create and/or update the raw data display if needed
+        # if self.bpm_plot:
+        #     self.make_bpm_plot()
+        #
+        # if self.send_serial:
+        #     self.serial.write(str(self.processor.bpm) + "\r\n")
+        #
+        # if self.send_udp:
+        #     self.sock.sendto(str(self.processor.bpm), self.udp)
+        #
+        # # handle any key presses
+        # self.key_handler()
 
-        # set current image frame to the processor's input
-        self.processor.frame_in = frame
-        # process the image frame to perform all needed analysis
-        self.processor.run(self.selected_cam)
-        # collect the output frame for display
-        output_frame = self.processor.frame_out
+    def start(self):
+        while self.source.isOpened():
+            self.main_loop()
+        self.source.release()
+        cv.destroyAllWindows()
 
-        # show the processed/annotated output frame
-        imshow("Processed", output_frame)
-
-        # create and/or update the raw data display if needed
-        if self.bpm_plot:
-            self.make_bpm_plot()
-
-        if self.send_serial:
-            self.serial.write(str(self.processor.bpm) + "\r\n")
-
-        if self.send_udp:
-            self.sock.sendto(str(self.processor.bpm), self.udp)
-
-        # handle any key presses
-        self.key_handler()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Webcam pulse detector.')
@@ -214,5 +227,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     App = getPulseApp(args)
-    while True:
-        App.main_loop()
+    # while True:
+    cv.getBuildInformation()
+    App.start()
+    App.main_loop()
