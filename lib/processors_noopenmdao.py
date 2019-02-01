@@ -87,12 +87,13 @@ class findFaceGetPulse(object):
                 int(w * fh_w),
                 int(h * fh_h)]
 
+    #получить среднее значение в прямоугольнике
     def get_subface_means(self, coord):
-        x, y, w, h = coord
+        x, y, w, h = coord #грацниы прямогульника
         subframe = self.frame_in[y:y + h, x:x + w, :]
-        v1 = np.mean(subframe[:, :, 0])
-        v2 = np.mean(subframe[:, :, 1])
-        v3 = np.mean(subframe[:, :, 2])
+        v1 = np.mean(subframe[:, :, 0]) #red component value
+        v2 = np.mean(subframe[:, :, 1]) #green
+        v3 = np.mean(subframe[:, :, 2]) #blue
 
         return (v1 + v2 + v3) / 3.
 
