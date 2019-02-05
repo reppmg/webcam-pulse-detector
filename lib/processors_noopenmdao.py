@@ -164,7 +164,7 @@ class findFaceGetPulse(object):
             x, y, w, h = forehead1
             cv2.putText(self.frame_out, "Forehead",
                        (x, y), cv2.FONT_HERSHEY_PLAIN, 1.5, col)
-            return
+            return 1
         if set(self.face_rect) == set([1, 1, 2, 2]):
             return
         cv2.putText(

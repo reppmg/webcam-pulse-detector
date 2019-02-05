@@ -57,7 +57,7 @@ class getPulseApp(object):
         #         self.cameras.append(camera)
         #     else:
         #         break
-        self.source = cv.VideoCapture('m_n_1_crop.mp4')
+        self.source = cv.VideoCapture('mp8_f.mp4')
         self.w, self.h = 0, 0
         self.pressed = 0
         # Containerized analysis of recieved image frames (an openMDAO assembly)
@@ -85,6 +85,7 @@ class getPulseApp(object):
                              "f": self.write_csv}
 
     def toggle_cam(self):
+        pass
         if len(self.cameras) > 1:
             self.processor.find_faces = True
             self.bpm_plot = False
@@ -178,36 +179,42 @@ class getPulseApp(object):
         # Get current image frame from the camera
         # frame = self.cameras[self.selected_cam].get_frame()
         ret, frame = self.source.read()
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        cv.imshow('frame', gray)
+        # gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        # cv.imshow('frame', gray)
 
-        # self.h, self.w, _c = frame.shape
-        #
-        # # display unaltered frame
-        # # imshow("Original",frame)
-        #
-        # # set current image frame to the processor's input
-        # self.processor.frame_in = frame
-        # # process the image frame to perform all needed analysis
-        # self.processor.run(self.selected_cam)
-        # # collect the output frame for display
-        # output_frame = self.processor.frame_out
-        #
-        # # show the processed/annotated output frame
-        # imshow("Processed", output_frame)
-        #
-        # # create and/or update the raw data display if needed
-        # if self.bpm_plot:
-        #     self.make_bpm_plot()
-        #
-        # if self.send_serial:
-        #     self.serial.write(str(self.processor.bpm) + "\r\n")
-        #
-        # if self.send_udp:
-        #     self.sock.sendto(str(self.processor.bpm), self.udp)
-        #
-        # # handle any key presses
-        # self.key_handler()
+        try:
+            self.h, self.w, _c = frame.shape
+        except:
+            self.write_csv()
+            sys.exit(0)
+
+        # display unaltered frame
+        # imshow("Original",frame)
+
+        # set current image frame to the processor's input
+        self.processor.frame_in = frame
+        # process the image frame to perform all needed analysis
+        res = self.processor.run(0)
+        if res == 1 and self.processor.find_faces:
+            self.toggle_search()
+        # collect the output frame for display
+        output_frame = self.processor.frame_out
+
+        # show the processed/annotated output frame
+        imshow("Processed", output_frame)
+
+        # create and/or update the raw data display if needed
+        if self.bpm_plot:
+            self.make_bpm_plot()
+
+        if self.send_serial:
+            self.serial.write(str(self.processor.bpm) + "\r\n")
+
+        if self.send_udp:
+            self.sock.sendto(str(self.processor.bpm), self.udp)
+
+        # handle any key presses
+        self.key_handler()
 
     def start(self):
         while self.source.isOpened():
