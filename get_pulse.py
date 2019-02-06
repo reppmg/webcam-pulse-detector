@@ -6,10 +6,11 @@ import cv2 as cv
 import argparse
 import numpy as np
 import datetime
-#TODO: work on serial port comms, if anyone asks for it
-#from serial import Serial
 import socket
 import sys
+
+FILENAME = 'mp8_f.mp4'
+
 
 class getPulseApp(object):
 
@@ -57,7 +58,7 @@ class getPulseApp(object):
         #         self.cameras.append(camera)
         #     else:
         #         break
-        self.source = cv.VideoCapture('mp8_f.mp4')
+        self.source = cv.VideoCapture(FILENAME)
         self.w, self.h = 0, 0
         self.pressed = 0
         # Containerized analysis of recieved image frames (an openMDAO assembly)
@@ -75,6 +76,7 @@ class getPulseApp(object):
 
         # Init parameters for the cardiac data plot
         self.bpm_plot = False
+        self.skip = False
         self.plot_title = "Data display - raw signal (top) and PSD (bottom)"
 
         # Maps keystrokes to specified methods
@@ -82,7 +84,12 @@ class getPulseApp(object):
         self.key_controls = {"s": self.toggle_search,
                              "d": self.toggle_display_plot,
                              "c": self.toggle_cam,
-                             "f": self.write_csv}
+                             "f": self.write_csv,
+                             "p": self.pause}
+
+    def pause(self):
+        self.skip = not self.skip
+
 
     def toggle_cam(self):
         pass
@@ -100,12 +107,13 @@ class getPulseApp(object):
         fmt = "%.4f"
         fn = "Webcam-pulse" + str(datetime.datetime.now())
         fn = fn.replace(":", "_").replace(".", "_")
-        data = np.vstack((self.processor.bpm_times, self.processor.bpm_history)).T
+        data = np.vstack((self.processor.bpm_times[0::10], self.processor.bpm_history[0::10])).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
         fn = "Webcam-pulse-percentile" + str(datetime.datetime.now())
         fn = fn.replace(":", "_").replace(".", "_")
         data = np.vstack((self.processor.percentile_times, self.processor.percentile_bpm_history)).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
+        print(np.mean(self.processor.bpm_history))
         print("Writing csv")
 
     def toggle_search(self):
@@ -176,6 +184,13 @@ class getPulseApp(object):
         """
         Single iteration of the application's main loop.
         """
+
+        # handle any key presses
+        self.key_handler()
+
+        if self.skip:
+            return
+
         # Get current image frame from the camera
         # frame = self.cameras[self.selected_cam].get_frame()
         ret, frame = self.source.read()
@@ -213,8 +228,6 @@ class getPulseApp(object):
         if self.send_udp:
             self.sock.sendto(str(self.processor.bpm), self.udp)
 
-        # handle any key presses
-        self.key_handler()
 
     def start(self):
         while self.source.isOpened():
