@@ -11,7 +11,7 @@ csv_file = "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/Webcam-pulse
 
 
 def transform(times, pulse):
-    pulse = smooth(pulse, 11, 'flat')
+    pulse = smooth(pulse, 11, 'bartlett')
     return times, pulse[0:len(times)]
 
 
@@ -21,8 +21,8 @@ pulse = data[:, 1]
 times, pulse = transform(times, pulse)
 expected_times, expected_pulse = read_file(bpm_file)
 plt.figure()
-title = "Flat window"
+title = "bartlett window"
 plt.title(title)
 plt.plot(times, pulse, expected_times, expected_pulse)
-# plt.show()
-plt.savefig("experiments/%s.png" % title)
+plt.show()
+# plt.savefig("experiments/%s.png" % title)
