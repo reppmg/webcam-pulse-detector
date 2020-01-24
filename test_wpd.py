@@ -35,7 +35,8 @@ for root, dirs, files in walk:
             plt.figure()
             plt.plot(time, bpm, time_base, bpm_base)
             plt.title(folder)
+            plt.legend(["estimated", "real"])
             plt.savefig(
-                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/savinsky/%s.png" % folder)
+                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/sav+perc/%s.png" % folder)
             plt.close()
 
