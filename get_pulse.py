@@ -13,7 +13,6 @@ FILENAME = 'mp8_f.mp4'
 
 
 class getPulseApp(object):
-
     """
     Python application that finds a face in a webcam stream, then isolates the
     forehead. 
@@ -47,8 +46,8 @@ class getPulseApp(object):
                 ip, port = udp.split(":")
                 port = int(port)
             self.udp = (ip, port)
-            self.sock = socket.socket(socket.AF_INET, # Internet
-                 socket.SOCK_DGRAM) # UDP
+            self.sock = socket.socket(socket.AF_INET,  # Internet
+                                      socket.SOCK_DGRAM)  # UDP
 
         # self.cameras = []
         # self.selected_cam = 0
@@ -58,7 +57,10 @@ class getPulseApp(object):
         #         self.cameras.append(camera)
         #     else:
         #         break
-        self.source = cv.VideoCapture(FILENAME)
+
+        video_file = vars(args)["video"]
+        self.dataset_name = str(video_file).split("/")[-2]
+        self.source = cv.VideoCapture(video_file)
         self.w, self.h = 0, 0
         self.pressed = 0
         # Containerized analysis of recieved image frames (an openMDAO assembly)
@@ -80,7 +82,7 @@ class getPulseApp(object):
         self.plot_title = "Data display - raw signal (top) and PSD (bottom)"
 
         # Maps keystrokes to specified methods
-        #(A GUI window must have focus for these to work)
+        # (A GUI window must have focus for these to work)
         self.key_controls = {"s": self.toggle_search,
                              "d": self.toggle_display_plot,
                              "c": self.toggle_cam,
@@ -89,7 +91,6 @@ class getPulseApp(object):
 
     def pause(self):
         self.skip = not self.skip
-
 
     def toggle_cam(self):
         pass
@@ -105,11 +106,11 @@ class getPulseApp(object):
         Writes current data to a csv file
         """
         fmt = "%.4f"
-        fn = "Webcam-pulse" + str(datetime.datetime.now())
+        fn = "Webcam-pulse-%s" % (self.dataset_name)
         fn = fn.replace(":", "_").replace(".", "_")
         data = np.vstack((self.processor.bpm_times[0::10], self.processor.bpm_history[0::10])).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
-        fn = "Webcam-pulse-percentile" + str(datetime.datetime.now())
+        fn = "Webcam-pulse-percentile-%s" % (self.dataset_name)
         fn = fn.replace(":", "_").replace(".", "_")
         data = np.vstack((self.processor.percentile_times, self.processor.percentile_bpm_history)).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
@@ -123,7 +124,7 @@ class getPulseApp(object):
         Locking the forehead location in place significantly improves
         data quality, once a forehead has been sucessfully isolated.
         """
-        #state = self.processor.find_faces.toggle()
+        # state = self.processor.find_faces.toggle()
         state = self.processor.find_faces_toggle()
         print("face detection lock =", not state)
 
@@ -228,7 +229,6 @@ class getPulseApp(object):
         if self.send_udp:
             self.sock.sendto(str(self.processor.bpm), self.udp)
 
-
     def start(self):
         while self.source.isOpened():
             self.main_loop()
@@ -244,7 +244,8 @@ if __name__ == "__main__":
                         help='Baud rate for serial transmission')
     parser.add_argument('--udp', default=None,
                         help='udp address:port destination for bpm data')
-
+    parser.add_argument("-v", "--video", default="mp7.mp4",
+                        help="path to the (optional) video file")
     args = parser.parse_args()
     App = getPulseApp(args)
     # while True:
