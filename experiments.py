@@ -7,7 +7,10 @@ bpm_file = "/Users/maksimrepp/Documents/nir/public_sheet/P1LC5/P1LC5_Mobi_RR-int
 csv_file = "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/Webcam-pulse-P1LC5.csv"
 
 
-def transform(times, pulse) :
+def transform(times, pulse):
+    pulse = (pulse[2:] + pulse[1:-1] + pulse[:-2]) / 3
+    pulse = np.append(pulse, pulse[0])
+    pulse = np.append(pulse, pulse[0])
     return times, pulse
 
 
@@ -17,6 +20,8 @@ pulse = data[:, 1]
 times, pulse = transform(times, pulse)
 expected_times, expected_pulse = read_file(bpm_file)
 plt.figure()
-plt.title("No changes")
+title = "Means 3 neighbours"
+plt.title(title)
 plt.plot(times, pulse, expected_times, expected_pulse)
 plt.show()
+# plt.savefig("experiments/%s.png" % title)
