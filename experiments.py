@@ -24,5 +24,5 @@ plt.figure()
 title = "bartlett window"
 plt.title(title)
 plt.plot(times, pulse, expected_times, expected_pulse)
-plt.show()
-# plt.savefig("experiments/%s.png" % title)
+# plt.show()
+plt.savefig("experiments/%s.png" % title)

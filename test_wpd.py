@@ -5,6 +5,7 @@ import subprocess
 import matplotlib.pyplot as plt
 import pandas as pd
 from test_graph import read_file
+from experiments import transform
 
 path_to_script = '/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/get_pulse.py'
 path_to_python = '/usr/local/bin/python3.7'
@@ -25,15 +26,16 @@ for root, dirs, files in walk:
             # print(output)
 
             folder = root.split("/")[-1]
-            out_file = "Webcam-pulse-percentile-%s.csv" % folder.lower()
+            out_file = "Webcam-pulse-%s.csv" % folder.lower()
             data = pd.read_csv(out_file).to_numpy()
             time, bpm = data[:, 0], data[:, 1]
+            time, bpm = transform(time, bpm)
             time_base, bpm_base = read_file(
                 "/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (folder, folder))
             plt.figure()
             plt.plot(time, bpm, time_base, bpm_base)
             plt.title(folder)
             plt.savefig(
-                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/test_percentile/%s.png" % folder)
+                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/savinsky/%s.png" % folder)
             plt.close()
 
