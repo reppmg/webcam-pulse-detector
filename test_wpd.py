@@ -1,11 +1,13 @@
 import os
 import runpy
+import numpy as np
+import sklearn.metrics
 import sys
 import subprocess
 import matplotlib.pyplot as plt
 import pandas as pd
 from test_graph import read_file
-from experiments import transform
+from experiments import transform, trim_real
 
 path_to_script = '/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/get_pulse.py'
 path_to_python = '/usr/local/bin/python3.7'
@@ -26,17 +28,25 @@ for root, dirs, files in walk:
             # print(output)
 
             folder = root.split("/")[-1]
-            out_file = "Webcam-pulse-%s.csv" % folder.lower()
+            out_file = "results_raw/Webcam-pulse-%s.csv" % folder.lower()
             data = pd.read_csv(out_file).to_numpy()
             time, bpm = data[:, 0], data[:, 1]
-            time, bpm = transform(time, bpm)
-            time_base, bpm_base = read_file(
+            ot = time.copy()
+            op = bpm.copy()
+            time, bpm, alg = transform(time, bpm)
+            time_real, bpm_real = read_file(
                 "/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (folder, folder))
+
+            time_real_trim, bpm_real_trim = trim_real(time_real, time, bpm_real)
+            bpm_est_interp = np.interp(time_real_trim, time, bpm)
+
+            error = sklearn.metrics.mean_squared_error(bpm_real_trim, bpm_est_interp)
+
             plt.figure()
-            plt.plot(time, bpm, time_base, bpm_base)
-            plt.title(folder)
+            plt.plot(time_real_trim, bpm_est_interp, time_real_trim, bpm_real_trim)
+            plt.title("%s. MSE: %.2f" %(folder, error))
             plt.legend(["estimated", "real"])
             plt.savefig(
-                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/sav+perc/%s.png" % folder)
+                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/da_best/%s.png" % folder)
             plt.close()
 

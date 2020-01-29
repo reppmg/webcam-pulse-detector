@@ -28,7 +28,9 @@ class findFaceGetPulse(object):
         self.frame_in = np.zeros((10, 10))
         self.frame_out = np.zeros((10, 10))
         self.frame_num = 0
-        self.fps = 30
+        self.cutlow = 2
+        self.skipped = 0
+        self.fps = 30 / self.cutlow
         self.buffer_size = 250
         # self.window = np.hamming(self.buffer_size)
         self.data_buffer = []

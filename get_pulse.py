@@ -59,7 +59,7 @@ class getPulseApp(object):
         #         break
 
         video_file = vars(args)["video"]
-        self.dataset_name = str(video_file).split("/")[-2]
+        self.dataset_name = "v_cl2" #str(video_file).split("/")[-2]
         self.source = cv.VideoCapture(video_file)
         self.w, self.h = 0, 0
         self.pressed = 0
@@ -195,6 +195,10 @@ class getPulseApp(object):
         # Get current image frame from the camera
         # frame = self.cameras[self.selected_cam].get_frame()
         ret, frame = self.source.read()
+        if self.processor.skipped != self.processor.cutlow - 1:
+            self.processor.skipped += 1
+            return
+        self.processor.skipped = 0
         # gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # cv.imshow('frame', gray)
 
