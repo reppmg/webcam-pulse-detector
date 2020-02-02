@@ -1,3 +1,5 @@
+import time
+
 from lib.device import Camera
 from lib.processors_noopenmdao import findFaceGetPulse
 from lib.interface import plotXY, imshow, waitKey, destroyWindow
@@ -57,8 +59,9 @@ class getPulseApp(object):
         #         break
 
         video_file = vars(args)["video"]
-        self.dataset_name = "v_cl2" #str(video_file).split("/")[-2]
-        self.source = cv.VideoCapture(0)
+        self.is_video = video_file != 0
+        self.dataset_name = "v_cl2"  # str(video_file).split("/")[-2]
+        self.source = cv.VideoCapture(video_file)
         self.w, self.h = 0, 0
         self.pressed = 0
         # Containerized analysis of recieved image frames (an openMDAO assembly)
@@ -72,7 +75,8 @@ class getPulseApp(object):
         # to the camera device or part of the GUI
         self.processor = findFaceGetPulse(bpm_limits=[50, 160],
                                           data_spike_limit=2500.,
-                                          face_detector_smoothness=10.)
+                                          face_detector_smoothness=10.,
+                                          is_video=self.is_video)
 
         # Init parameters for the cardiac data plot
         self.bpm_plot = False
@@ -213,7 +217,7 @@ class getPulseApp(object):
         self.processor.frame_in = frame
         # process the image frame to perform all needed analysis
         res = self.processor.run(0)
-        if res == 1 and self.processor.find_faces:
+        if res == 1 and self.processor.find_faces and self.is_video:
             self.toggle_search()
         # collect the output frame for display
         output_frame = self.processor.frame_out
@@ -231,12 +235,26 @@ class getPulseApp(object):
         if self.send_udp:
             self.sock.sendto(str(self.processor.bpm), self.udp)
 
+        global st
+        global frames
+        frames += 1
+        if st is None:
+            st = time.time()
+            return
+        fps = frames / (time.time() - st)
+        print("FPS = %.2f" % fps)
+        if time.time() - st > 5:
+            st = None
+            frames = 0
+
     def start(self):
         while self.source.isOpened():
             self.main_loop()
         self.source.release()
         cv.destroyAllWindows()
 
+st = None
+frames = 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Webcam pulse detector.')

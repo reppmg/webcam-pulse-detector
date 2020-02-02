@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import cv2
 import pylab
@@ -22,7 +24,7 @@ def resource_path(relative_path):
 class findFaceGetPulse(object):
 
     def __init__(self, bpm_limits=[], data_spike_limit=250,
-                 face_detector_smoothness=10):
+                 face_detector_smoothness=10, is_video=False, fps=30):
 
         self.percentile = PERCENTILE
         self.percentile_time_offset = 10
@@ -31,7 +33,8 @@ class findFaceGetPulse(object):
         self.frame_num = 0
         self.cutlow = 1
         self.skipped = 0
-        self.fps = 30 / self.cutlow
+        self.base_fps = fps
+        self.fps = self.base_fps / self.cutlow
         self.buffer_size = 250
         # self.window = np.hamming(self.buffer_size)
         self.data_buffer = []
@@ -41,7 +44,7 @@ class findFaceGetPulse(object):
         self.freqs = []
         self.fft = []
         self.slices = [[0]]
-        self.t0 = 0
+        self.t0 = time.time()
         self.bpms = []
         self.bpm_times = []
         self.bpm = 0
@@ -68,6 +71,8 @@ class findFaceGetPulse(object):
         self.fig = plt.figure()
         self.plot = self.fig.add_subplot(111)
         self.fig.show()
+
+        self.is_video = is_video
 
     def find_faces_toggle(self):
         self.find_faces = not self.find_faces
@@ -136,7 +141,8 @@ class findFaceGetPulse(object):
 
     def run(self, cam):
         self.frame_num += 1
-        self.times.append(self.frame_num * (1 / self.fps))
+        self.times.append(self.current_time())
+        display_fps = self.frame_num / (self.current_time() + 0.01)
         self.frame_out = self.frame_in
         self.gray = cv2.equalizeHist(cv2.cvtColor(self.frame_in,
                                                   cv2.COLOR_BGR2GRAY))
@@ -151,6 +157,8 @@ class findFaceGetPulse(object):
                 (10, 50), cv2.FONT_HERSHEY_PLAIN, 1.25, col)
             cv2.putText(self.frame_out, "Press 'Esc' to quit",
                         (10, 75), cv2.FONT_HERSHEY_PLAIN, 1.25, col)
+            cv2.putText(self.frame_out, "Fps: %.2f" % display_fps,
+                        (10, 100), cv2.FONT_HERSHEY_PLAIN, 1.25, col)
             self.data_buffer, self.times, self.trained = [], [], False
             detected = list(self.face_cascade.detectMultiScale(self.gray,
                                                                scaleFactor=1.3,
@@ -207,6 +215,7 @@ class findFaceGetPulse(object):
         if L > 10:
             self.output_dim = processed.shape[0]
 
+            self.fps = self.calc_fps(L)
             even_times = np.linspace(self.times[0], self.times[-1], L)
             interpolated = np.interp(even_times, self.times, processed)
             interpolated = np.hamming(L) * interpolated
@@ -268,9 +277,20 @@ class findFaceGetPulse(object):
                 text = "(est: %0.1f bpm, perc: %0.1f, wait %0.0f s)" % (self.bpm, self.percentile_bpm, gap)
             else:
                 text = "(est: %0.1f bpm, perc: %0.1f)" % (self.bpm, self.percentile_bpm)
-                self.plot.plot(self.bpm_times, self.bpm_history, 'r-')
+                self.plot.plot(self.bpm_times[self.buffer_size:], self.bpm_history[self.buffer_size:], 'r-')
                 self.fig.canvas.draw()
             tsize = 1
             cv2.putText(self.frame_out, text,
                         (int(x - w / 2), int(y)), cv2.FONT_HERSHEY_PLAIN, tsize, col)
 
+    def calc_fps(self, L):
+        if self.is_video:
+            return self.base_fps / self.cutlow
+        else:
+            return float(L) / (self.times[-1] - self.times[0])
+
+    def current_time(self):
+        if self.is_video:
+            return self.frame_num * (1 / self.fps)
+        else:
+            return time.time() - self.t0
