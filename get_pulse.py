@@ -9,8 +9,6 @@ import datetime
 import socket
 import sys
 
-FILENAME = 'mp8_f.mp4'
-
 
 class getPulseApp(object):
     """
@@ -60,7 +58,7 @@ class getPulseApp(object):
 
         video_file = vars(args)["video"]
         self.dataset_name = "v_cl2" #str(video_file).split("/")[-2]
-        self.source = cv.VideoCapture(video_file)
+        self.source = cv.VideoCapture(0)
         self.w, self.h = 0, 0
         self.pressed = 0
         # Containerized analysis of recieved image frames (an openMDAO assembly)
@@ -248,7 +246,7 @@ if __name__ == "__main__":
                         help='Baud rate for serial transmission')
     parser.add_argument('--udp', default=None,
                         help='udp address:port destination for bpm data')
-    parser.add_argument("-v", "--video", default="mp7.mp4",
+    parser.add_argument("-v", "--video", default=0,
                         help="path to the (optional) video file")
     args = parser.parse_args()
     App = getPulseApp(args)

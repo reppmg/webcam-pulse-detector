@@ -3,6 +3,7 @@ import cv2
 import pylab
 import os
 import sys
+import matplotlib.pyplot as plt
 
 PERCENTILE = 0.0001
 
@@ -28,7 +29,7 @@ class findFaceGetPulse(object):
         self.frame_in = np.zeros((10, 10))
         self.frame_out = np.zeros((10, 10))
         self.frame_num = 0
-        self.cutlow = 2
+        self.cutlow = 1
         self.skipped = 0
         self.fps = 30 / self.cutlow
         self.buffer_size = 250
@@ -62,6 +63,11 @@ class findFaceGetPulse(object):
 
         self.idx = 1
         self.find_faces = True
+
+        plt.ion()
+        self.fig = plt.figure()
+        self.plot = self.fig.add_subplot(111)
+        self.fig.show()
 
     def find_faces_toggle(self):
         self.find_faces = not self.find_faces
@@ -262,6 +268,9 @@ class findFaceGetPulse(object):
                 text = "(est: %0.1f bpm, perc: %0.1f, wait %0.0f s)" % (self.bpm, self.percentile_bpm, gap)
             else:
                 text = "(est: %0.1f bpm, perc: %0.1f)" % (self.bpm, self.percentile_bpm)
+                self.plot.plot(self.bpm_times, self.bpm_history, 'r-')
+                self.fig.canvas.draw()
             tsize = 1
             cv2.putText(self.frame_out, text,
                         (int(x - w / 2), int(y)), cv2.FONT_HERSHEY_PLAIN, tsize, col)
+
