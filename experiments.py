@@ -16,6 +16,8 @@ csv_file = "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/Webcam-pulse
 
 
 def transform(times, pulse):
+    if len(pulse) < 100:
+        return times, pulse, "too short"
     percentile = np.percentile(pulse, 90)
     percentile_low = np.percentile(pulse, 10)
     mean_window_size = 30

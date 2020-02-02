@@ -7,6 +7,8 @@ import os
 import sys
 import matplotlib.pyplot as plt
 
+from experiments import transform
+
 PERCENTILE = 0.0001
 
 
@@ -277,11 +279,20 @@ class findFaceGetPulse(object):
                 text = "(est: %0.1f bpm, perc: %0.1f, wait %0.0f s)" % (self.bpm, self.percentile_bpm, gap)
             else:
                 text = "(est: %0.1f bpm, perc: %0.1f)" % (self.bpm, self.percentile_bpm)
-                self.plot.plot(self.bpm_times[self.buffer_size:], self.bpm_history[self.buffer_size:], 'r-')
-                self.fig.canvas.draw()
+                self.draw_bpm_plot()
             tsize = 1
             cv2.putText(self.frame_out, text,
                         (int(x - w / 2), int(y)), cv2.FONT_HERSHEY_PLAIN, tsize, col)
+
+    def draw_bpm_plot(self):
+        if self.frame_num % 10 != 0:
+            return
+        self.plot.clear()
+        times = self.bpm_times[self.buffer_size:]
+        bpms = self.bpm_history[self.buffer_size:]
+        times, bpms, alg = transform(times, bpms)
+        self.plot.plot(times, bpms, 'r-')
+        self.fig.canvas.draw()
 
     def calc_fps(self, L):
         if self.is_video:

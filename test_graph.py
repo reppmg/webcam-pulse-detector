@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def read_file(file):
@@ -16,10 +17,18 @@ def read_file(file):
     return time, bpm
 
 
-# time, bpm = read_file("bpm_p1lc4_edited.txt")
+# data = pd.read_csv("Webcam-pulse-v_cl2.csv", sep=",").to_numpy()
+# time, bpm = data[:, 0], data[:, 1]
 # set = "P1LC4"
-# time_base, bpm_base = read_file("/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (set, set))
+# # time_base, bpm_base = read_file("/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (set, set))
 # plt.figure()
-# plt.plot(time, bpm, time_base, bpm_base)
+# plt.plot(time, bpm)
 # plt.show()
 # plt.savefig("%s.png" % set)
+#
+# def shit():
+#     return "a", "b"
+#
+#
+# a, b = shit()
+# print(a)
