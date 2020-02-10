@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+from constants import *
 from test_graph import read_file
 from scipy.signal import savgol_filter
 import sklearn.metrics
@@ -20,7 +22,7 @@ def transform(times, pulse):
         return times, pulse, "too short"
     percentile = np.percentile(pulse, 90)
     percentile_low = np.percentile(pulse, 10)
-    mean_window_size = 30
+    mean_window_size = percentile_neighbours
     for i, p in enumerate(pulse):
         if p > percentile:
             start = max(0, i - mean_window_size)
@@ -30,7 +32,7 @@ def transform(times, pulse):
             start = max(0, i - mean_window_size)
             end = min(len(pulse), i + mean_window_size)
             pulse[i] = np.mean(pulse[start:end])
-    pulse = savgol_filter(pulse, 51, 3)
+    pulse = savgol_filter(pulse, savgol_window, savgol_power)
     return times, pulse[0:len(times)], "percMeanNeigh30 + savgol cutlow 2"
 
 

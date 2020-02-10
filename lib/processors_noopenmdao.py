@@ -73,6 +73,7 @@ class findFaceGetPulse(object):
         self.fig = plt.figure()
         self.plot = self.fig.add_subplot(111)
         self.fig.show()
+        self.plot.set_ylim([45, 180])
 
         self.is_video = is_video
 
@@ -230,8 +231,11 @@ class findFaceGetPulse(object):
             freqs = 60. * self.freqs
             idx = np.where((freqs > 55) & (freqs < 180))
 
-            pruned = self.fft[idx]
-            phase = phase[idx]
+            try:
+                pruned = self.fft[idx]
+                phase = phase[idx]
+            except:
+                return
 
             pfreq = freqs[idx]
             self.freqs = pfreq
@@ -291,6 +295,7 @@ class findFaceGetPulse(object):
         times = self.bpm_times[self.buffer_size:]
         bpms = self.bpm_history[self.buffer_size:]
         times, bpms, alg = transform(times, bpms)
+        plt.ylim(45, 150)
         self.plot.plot(times, bpms, 'r-')
         self.fig.canvas.draw()
 
