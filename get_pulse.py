@@ -110,10 +110,10 @@ class getPulseApp(object):
         fmt = "%.4f"
         fn = "Webcam-pulse-%s" % (self.dataset_name)
         fn = fn.replace(":", "_").replace(".", "_")
-        data = np.vstack((self.processor.bpm_times[0::10], self.processor.bpm_history[0::10])).T
+        data = np.vstack((self.processor.bpm_times, self.processor.bpm_history)).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
         fn = "Webcam-pulse-percentile-%s" % (self.dataset_name)
-        fn = fn.replace(":", "_").replace(".", "_")
+        fn  = fn.replace(":", "_").replace(".", "_")
         data = np.vstack((self.processor.percentile_times, self.processor.percentile_bpm_history)).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
         print(np.mean(self.processor.bpm_history))
@@ -223,7 +223,7 @@ class getPulseApp(object):
         output_frame = self.processor.frame_out
 
         # show the processed/annotated output frame
-        imshow("Processed", output_frame)
+        # imshow("Processed", output_frame)
 
         # create and/or update the raw data display if needed
         if self.bpm_plot:
@@ -252,6 +252,7 @@ class getPulseApp(object):
             self.main_loop()
         self.source.release()
         cv.destroyAllWindows()
+
 
 st = None
 frames = 0
