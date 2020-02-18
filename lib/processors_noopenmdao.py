@@ -13,7 +13,6 @@ import mobilenet_v1
 import torchvision.transforms as transforms
 from utils.ddfa import ToTensorGjz, NormalizeGjz, str2bool
 
-
 from experiments import transform
 from utils.inference import predict_68pts, parse_roi_box_from_landmark, crop_img
 
@@ -116,13 +115,13 @@ class findFaceGetPulse(object):
 
     def get_subface_coord(self, fh_x, fh_y, fh_w, fh_h):
         x, y, w, h = self.face_rect
-        left_x, left_y = self.left_brow_point
-        right_x, right_y = self.right_brow_point
         if self.left_brow_point is None:
             return [int(x + w * fh_x - (w * fh_w / 2.0)),
                     int(y + h * fh_y - (h * fh_h / 2.0)),
                     int(w * fh_w),
                     int(h * fh_h)]
+        left_x, left_y = self.left_brow_point
+        right_x, right_y = self.right_brow_point
         return [
             int(left_x),
             int(left_y),
@@ -401,10 +400,10 @@ class findFaceGetPulse(object):
                     self.left_brow_point = (pts68[0][19], pts68[1][19])
                     self.right_brow_point = (pts68[0][24], pts68[1][24])
 
-                    # for x in range(0, 67):
-                    #     cv2.circle(img_ori, (pts68[0][x], pts68[1][x]), 1, (0, 0, 255), -1)
-                    cv2.circle(img_ori, (pts68[0][19], pts68[1][19]), 1, (0, 0, 255), -1)
-                    cv2.circle(img_ori, (pts68[0][24], pts68[1][24]), 1, (0, 0, 255), -1)
+                    for i in range(0, 67):
+                        cv2.circle(img_ori, (pts68[0][i], pts68[1][i]), 1, (0, 0, 255), -1)
+                    # cv2.circle(img_ori, (pts68[0][19], pts68[1][19]), 1, (0, 0, 255), -1)
+                    # cv2.circle(img_ori, (pts68[0][24], pts68[1][24]), 1, (0, 0, 255), -1)
 
                     return [x, y, w, h]
         return self.face_rect
