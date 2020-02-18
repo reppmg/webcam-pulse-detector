@@ -1,13 +1,21 @@
+import math
 import time
 
+import dlib
 import numpy as np
 import cv2
 import pylab
 import os
 import sys
 import matplotlib.pyplot as plt
+import torch
+import mobilenet_v1
+import torchvision.transforms as transforms
+from utils.ddfa import ToTensorGjz, NormalizeGjz, str2bool
+
 
 from experiments import transform
+from utils.inference import predict_68pts, parse_roi_box_from_landmark, crop_img
 
 PERCENTILE = 0.0001
 
@@ -77,6 +85,16 @@ class findFaceGetPulse(object):
 
         self.is_video = is_video
 
+        self.net = cv2.dnn.readNet("tiny-yolo-azface-fddb_82000.weights", "tiny-yolo-azface-fddb.cfg")
+        dlib_landmark_model = 'models/shape_predictor_68_face_landmarks.dat'
+        self.face_regressor = dlib.shape_predictor(dlib_landmark_model)
+        self.model = getattr(mobilenet_v1, 'mobilenet_1')(num_classes=62)
+
+        self.right_brow_point = None
+        self.left_brow_point = None
+
+        self.transform = transforms.Compose([ToTensorGjz(), NormalizeGjz(mean=127.5, std=128)])
+
     def find_faces_toggle(self):
         self.find_faces = not self.find_faces
         return self.find_faces
@@ -98,10 +116,19 @@ class findFaceGetPulse(object):
 
     def get_subface_coord(self, fh_x, fh_y, fh_w, fh_h):
         x, y, w, h = self.face_rect
-        return [int(x + w * fh_x - (w * fh_w / 2.0)),
-                int(y + h * fh_y - (h * fh_h / 2.0)),
-                int(w * fh_w),
-                int(h * fh_h)]
+        left_x, left_y = self.left_brow_point
+        right_x, right_y = self.right_brow_point
+        if self.left_brow_point is None:
+            return [int(x + w * fh_x - (w * fh_w / 2.0)),
+                    int(y + h * fh_y - (h * fh_h / 2.0)),
+                    int(w * fh_w),
+                    int(h * fh_h)]
+        return [
+            int(left_x),
+            int(left_y),
+            int(right_x - left_x),
+            int(h * fh_h)
+        ]
 
     # получить среднее значение в прямоугольнике
     def get_subface_means(self, coord):
@@ -147,8 +174,8 @@ class findFaceGetPulse(object):
         self.times.append(self.current_time())
         display_fps = self.frame_num / (self.current_time() + 0.01)
         self.frame_out = self.frame_in
-        self.gray = cv2.equalizeHist(cv2.cvtColor(self.frame_in,
-                                                  cv2.COLOR_BGR2GRAY))
+        # self.gray = cv2.equalizeHist(cv2.cvtColor(self.frame_in,
+        #                                           cv2.COLOR_BGR2GRAY))
         col = (100, 255, 100)
         if self.find_faces:
             cv2.putText(
@@ -163,18 +190,8 @@ class findFaceGetPulse(object):
             cv2.putText(self.frame_out, "Fps: %.2f" % display_fps,
                         (10, 100), cv2.FONT_HERSHEY_PLAIN, 1.25, col)
             self.data_buffer, self.times, self.trained = [], [], False
-            detected = list(self.face_cascade.detectMultiScale(self.gray,
-                                                               scaleFactor=1.3,
-                                                               minNeighbors=4,
-                                                               minSize=(
-                                                                   50, 50),
-                                                               flags=cv2.CASCADE_SCALE_IMAGE))
+            self.face_rect = self.detect_faces()
 
-            if len(detected) > 0:
-                detected.sort(key=lambda a: a[-1] * a[-2])
-
-                if self.shift(detected[-1]) > 10:
-                    self.face_rect = detected[-1]
             forehead1 = self.get_subface_coord(0.5, 0.18, 0.25, 0.15)
             self.draw_rect(self.face_rect, col=(255, 0, 0))
             x, y, w, h = self.face_rect
@@ -253,14 +270,14 @@ class findFaceGetPulse(object):
             self.idx += 1
 
             x, y, w, h = self.get_subface_coord(0.5, 0.18, 0.25, 0.15)
-            r = alpha * self.frame_in[y:y + h, x:x + w, 0]
-            g = alpha * \
-                self.frame_in[y:y + h, x:x + w, 1] + \
-                beta * self.gray[y:y + h, x:x + w]
-            b = alpha * self.frame_in[y:y + h, x:x + w, 2]
-            self.frame_out[y:y + h, x:x + w] = cv2.merge([r,
-                                                          g,
-                                                          b])
+            # r = alpha * self.frame_in[y:y + h, x:x + w, 0]
+            # g = alpha * \
+            #     self.frame_in[y:y + h, x:x + w, 1] + \
+            #     beta * self.gray[y:y + h, x:x + w]
+            # b = alpha * self.frame_in[y:y + h, x:x + w, 2]
+            # self.frame_out[y:y + h, x:x + w] = cv2.merge([r,
+            #                                               g,
+            #                                               b])
             x1, y1, w1, h1 = self.face_rect
             self.slices = [np.copy(self.frame_out[y1:y1 + h1, x1:x1 + w1, 1])]
             col = (100, 255, 100)
@@ -287,6 +304,110 @@ class findFaceGetPulse(object):
             tsize = 1
             cv2.putText(self.frame_out, text,
                         (int(x - w / 2), int(y)), cv2.FONT_HERSHEY_PLAIN, tsize, col)
+
+    def parse_roi_box_from_landmark(self, pts):
+        """calc roi box from landmark"""
+        bbox = [min(pts[0, :]), min(pts[1, :]), max(pts[0, :]), max(pts[1, :])]
+        center = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2]
+        radius = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 2
+        bbox = [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius]
+
+        llength = math.sqrt((bbox[2] - bbox[0]) ** 2 + (bbox[3] - bbox[1]) ** 2)
+        center_x = (bbox[2] + bbox[0]) / 2
+        center_y = (bbox[3] + bbox[1]) / 2
+
+        roi_box = [0] * 4
+        roi_box[0] = center_x - llength / 2
+        roi_box[1] = center_y - llength / 2
+        roi_box[2] = roi_box[0] + llength
+        roi_box[3] = roi_box[1] + llength
+
+        return roi_box
+
+    def crop_img(self, img, roi_box):
+        h, w = img.shape[:2]
+
+        sx, sy, ex, ey = [int(round(_)) for _ in roi_box]
+        dh, dw = ey - sy, ex - sx
+        if len(img.shape) == 3:
+            res = np.zeros((dh, dw, 3), dtype=np.uint8)
+        else:
+            res = np.zeros((dh, dw), dtype=np.uint8)
+        if sx < 0:
+            sx, dsx = 0, -sx
+        else:
+            dsx = 0
+
+        if ex > w:
+            ex, dex = w, dw - (ex - w)
+        else:
+            dex = dw
+
+        if sy < 0:
+            sy, dsy = 0, -sy
+        else:
+            dsy = 0
+
+        if ey > h:
+            ey, dey = h, dh - (ey - h)
+        else:
+            dey = dh
+
+        res[dsy:dey, dsx:dex] = img[sy:ey, sx:ex]
+        return res
+
+    def detect_faces(self):
+        # return list(self.face_cascade.detectMultiScale(self.gray,
+        #                                                scaleFactor=1.3,
+        #                                                minNeighbors=4,
+        #                                                minSize=(
+        #                                                    50, 50),
+        #                                                flags=cv2.CASCADE_SCALE_IMAGE))
+        img_ori = self.frame_in
+        net = self.net
+        layers_names = net.getLayerNames()
+        outputlayers = [layers_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+        blob = cv2.dnn.blobFromImage(img_ori, 0.00392, (480, 480), (0, 0, 0), True, crop=False)
+        net.setInput(blob)
+        outs = net.forward(outputlayers)
+        height, width, channels = img_ori.shape
+        rects = []
+        for out in outs:
+            for detection in out:
+                scores = detection[5:]
+                class_id = np.argmax(scores)
+                confidence = scores[class_id]
+                if confidence > 0.2:
+                    center_x = int(detection[0] * width)
+                    center_y = int(detection[1] * height)
+                    w = int(detection[2] * width)
+                    h = int(detection[3] * height)
+                    x = int(center_x - w / 2)
+                    y = int(center_y - h / 2)
+                    pts = self.face_regressor(img_ori, dlib.rectangle(int(x), int(y), x + w, y + h)).parts()
+                    pts = np.array([[pt.x, pt.y] for pt in pts]).T
+
+                    roi_box = parse_roi_box_from_landmark(pts)
+
+                    img = crop_img(img_ori, roi_box)
+
+                    img = cv2.resize(img, dsize=(120, 120), interpolation=cv2.INTER_LINEAR)
+                    input = self.transform(img).unsqueeze(0)
+                    with torch.no_grad():
+                        param = self.model(input)
+                        param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
+
+                    pts68 = predict_68pts(param, roi_box)
+                    self.left_brow_point = (pts68[0][19], pts68[1][19])
+                    self.right_brow_point = (pts68[0][24], pts68[1][24])
+
+                    # for x in range(0, 67):
+                    #     cv2.circle(img_ori, (pts68[0][x], pts68[1][x]), 1, (0, 0, 255), -1)
+                    cv2.circle(img_ori, (pts68[0][19], pts68[1][19]), 1, (0, 0, 255), -1)
+                    cv2.circle(img_ori, (pts68[0][24], pts68[1][24]), 1, (0, 0, 255), -1)
+
+                    return [x, y, w, h]
+        return self.face_rect
 
     def draw_bpm_plot(self):
         if self.frame_num % 10 != 0:
