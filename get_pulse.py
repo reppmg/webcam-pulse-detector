@@ -60,7 +60,7 @@ class getPulseApp(object):
 
         video_file = vars(args)["video"]
         self.is_video = video_file != 0
-        self.dataset_name = "v_cl2"  # str(video_file).split("/")[-2]
+        self.dataset_name = "%s-dlib-dots" % video_file.split("/")[-1].split(".")[0]  # str(video_file).split("/")[-2]
         self.source = cv.VideoCapture(video_file)
         self.w, self.h = 0, 0
         self.pressed = 0
@@ -108,7 +108,7 @@ class getPulseApp(object):
         Writes current data to a csv file
         """
         fmt = "%.4f"
-        fn = "Webcam-pulse-%s" % (self.dataset_name)
+        fn = "results_raw/Webcam-pulse-%s" % (self.dataset_name)
         fn = fn.replace(":", "_").replace(".", "_")
         data = np.vstack((self.processor.bpm_times, self.processor.bpm_history)).T
         np.savetxt(fn + ".csv", data, delimiter=',', fmt=fmt)
@@ -223,7 +223,7 @@ class getPulseApp(object):
         output_frame = self.processor.frame_out
 
         # show the processed/annotated output frame
-        imshow("Processed", output_frame)
+        # imshow("Processed", output_frame)
 
         # create and/or update the raw data display if needed
         if self.bpm_plot:

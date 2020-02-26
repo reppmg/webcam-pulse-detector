@@ -13,7 +13,7 @@ import mobilenet_v1
 import torchvision.transforms as transforms
 from utils.ddfa import ToTensorGjz, NormalizeGjz, str2bool
 
-from experiments import transform
+from transforms import transform
 from utils.inference import predict_68pts, parse_roi_box_from_landmark, crop_img
 
 PERCENTILE = 0.0001
@@ -122,11 +122,13 @@ class findFaceGetPulse(object):
                     int(h * fh_h)]
         left_x, left_y = self.left_brow_point
         right_x, right_y = self.right_brow_point
+        rect_h = 30
+        brow_offset = 10
         return [
             int(left_x),
-            int(left_y),
+            int(left_y - rect_h - brow_offset),
             int(right_x - left_x),
-            int(h * fh_h)
+            int(rect_h)
         ]
 
     # получить среднее значение в прямоугольнике
@@ -203,6 +205,7 @@ class findFaceGetPulse(object):
             return 1
         if set(self.face_rect) == set([1, 1, 2, 2]):
             return
+        self.face_rect = self.detect_faces()
         cv2.putText(
             self.frame_out, "Press 'C' to change camera (current: %s)" % str(
                 cam),
@@ -215,7 +218,7 @@ class findFaceGetPulse(object):
         cv2.putText(self.frame_out, "Press 'Esc' to quit",
                     (10, 100), cv2.FONT_HERSHEY_PLAIN, 1.5, col)
 
-        forehead1 = self.get_subface_coord(0.5, 0.18, 0.25, 0.15)
+        forehead1 = self.get_subface_coord(0.5, 0.0, 0.25, 0.15)
         self.draw_rect(forehead1)
 
         vals = self.get_subface_means(forehead1)
@@ -299,7 +302,7 @@ class findFaceGetPulse(object):
                 text = "(est: %0.1f bpm, perc: %0.1f, wait %0.0f s)" % (self.bpm, self.percentile_bpm, gap)
             else:
                 text = "(est: %0.1f bpm, perc: %0.1f)" % (self.bpm, self.percentile_bpm)
-                self.draw_bpm_plot()
+                # self.draw_bpm_plot()
             tsize = 1
             cv2.putText(self.frame_out, text,
                         (int(x - w / 2), int(y)), cv2.FONT_HERSHEY_PLAIN, tsize, col)
@@ -362,6 +365,7 @@ class findFaceGetPulse(object):
         #                                                minSize=(
         #                                                    50, 50),
         #                                                flags=cv2.CASCADE_SCALE_IMAGE))
+        np.random.seed(1)
         img_ori = self.frame_in
         net = self.net
         layers_names = net.getLayerNames()
@@ -383,27 +387,33 @@ class findFaceGetPulse(object):
                     h = int(detection[3] * height)
                     x = int(center_x - w / 2)
                     y = int(center_y - h / 2)
-                    pts = self.face_regressor(img_ori, dlib.rectangle(int(x), int(y), x + w, y + h)).parts()
-                    pts = np.array([[pt.x, pt.y] for pt in pts]).T
+                    self.draw_rect((x, y, w, h))
+                    rect = dlib.rectangle(int(x), int(y), x + w, y + h)
+                    np.random.seed(1)
+                    pts = self.face_regressor(img_ori, rect).parts()
+                    # pts = np.array([[pt.x, pt.y] for pt in pts]).T
+                    #
+                    # roi_box = parse_roi_box_from_landmark(pts)
+                    #
+                    # img = crop_img(img_ori, roi_box)
+                    # cv2.imshow("web_img", img)
+                    #
+                    # img = cv2.resize(img, dsize=(120, 120), interpolation=cv2.INTER_LINEAR)
+                    # input = self.transform(img).unsqueeze(0)
+                    # with torch.no_grad():
+                    #     param = self.model(input)
+                    #     param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
+                    #
+                    # pts68 = predict_68pts(param, roi_box)
+                    pts68 = pts
+                    self.left_brow_point = (pts68[19].x, pts68[19].y)
+                    self.right_brow_point = (pts68[24].x, pts68[24].y)
 
-                    roi_box = parse_roi_box_from_landmark(pts)
-
-                    img = crop_img(img_ori, roi_box)
-
-                    img = cv2.resize(img, dsize=(120, 120), interpolation=cv2.INTER_LINEAR)
-                    input = self.transform(img).unsqueeze(0)
-                    with torch.no_grad():
-                        param = self.model(input)
-                        param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
-
-                    pts68 = predict_68pts(param, roi_box)
-                    self.left_brow_point = (pts68[0][19], pts68[1][19])
-                    self.right_brow_point = (pts68[0][24], pts68[1][24])
-
-                    for i in range(0, 67):
-                        cv2.circle(img_ori, (pts68[0][i], pts68[1][i]), 1, (0, 0, 255), -1)
-                    # cv2.circle(img_ori, (pts68[0][19], pts68[1][19]), 1, (0, 0, 255), -1)
-                    # cv2.circle(img_ori, (pts68[0][24], pts68[1][24]), 1, (0, 0, 255), -1)
+                    # for i in range(0, 67):
+                    #     pnt = pts[i].x, pts[i].y
+                    #     cv2.circle(img_ori, pnt, 1, (0, 0, 255), -1)
+                    cv2.circle(img_ori, self.left_brow_point, 1, (0, 0, 255), -1)
+                    cv2.circle(img_ori, self.right_brow_point, 1, (0, 0, 255), -1)
 
                     return [x, y, w, h]
         return self.face_rect
