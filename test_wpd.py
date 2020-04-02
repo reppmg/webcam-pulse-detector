@@ -20,23 +20,26 @@ for root, dirs, files in walk:
         if file.endswith(".mp4"):
             filename = file.split(".")[0]
             path_to_video = os.path.join(root, file)
-            sys.argv[0] = '-v %s' % path_to_video
-            bashCommand = '%s %s -v %s' % (path_to_python, path_to_script, path_to_video)
-            print(bashCommand)
-
-            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            output, error = process.communicate()
-            print(output)
+            # sys.argv[0] = '-v %s' % path_to_video
+            # bashCommand = '%s %s -v %s' % (path_to_python, path_to_script, path_to_video)
+            # print(bashCommand)
+            #
+            # process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+            # output, error = process.communicate()
+            # print(output)
 
             folder = root.split("/")[-1]
             out_file = "results_raw/Webcam-pulse-%s-dlib-dots.csv" % filename
             data = pd.read_csv(out_file).to_numpy()
-            time, bpm = data[:, 0], data[:, 1]
+            time, bpm = data[250:, 0], data[250:, 1]
+            time -= time[0]
             ot = time.copy()
             op = bpm.copy()
             time, bpm, alg = transform(time, bpm)
             time_real, bpm_real = read_file(
                 "/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (folder, folder))
+            time_real = time_real[0:-20]
+            bpm_real = bpm_real[0:-20]
 
             time_real_trim, bpm_real_trim = trim_real(time_real, time, bpm_real)
             bpm_est_interp = np.interp(time_real_trim, time, bpm)
