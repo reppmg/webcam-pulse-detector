@@ -10,6 +10,11 @@ from read_files import read_file
 from experiments import trim_real
 from transforms import transform
 
+def relative_error(bpm_est, bpm_real):
+    relative_error = np.mean(np.abs(bpm_est - bpm_real) / bpm_real)
+    # error = sklearn.metrics.mean_squared_error(bpm_real, bpm_est)
+    return relative_error
+
 path_to_script = '/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/get_pulse.py'
 path_to_python = '/usr/local/bin/python3.7'
 
@@ -18,6 +23,8 @@ next(walk)
 for root, dirs, files in walk:
     for file in files:
         if file.endswith(".mp4"):
+            if "P1H1" not in file:
+                continue
             filename = file.split(".")[0]
             path_to_video = os.path.join(root, file)
             # sys.argv[0] = '-v %s' % path_to_video
@@ -29,14 +36,15 @@ for root, dirs, files in walk:
             # print(output)
 
             folder = root.split("/")[-1]
-            out_file = "results_raw_cutlow2/Webcam-pulse-%s-dlib-dots.csv" % filename
+            suffix = "dlib-dots"
+            out_file = "results_raw/Webcam-pulse-%s-%s.csv" % (filename, suffix)
             data = pd.read_csv(out_file).to_numpy()
             time, bpm = data[250:, 0], data[250:, 1]
-            time -= time[0] * 0.75
+            time -= time[0]
 
             ot = time.copy()
             op = bpm.copy()
-            # time, bpm, alg = transform(time, bpm)
+            time, bpm, alg = transform(time, bpm)
             time_real, bpm_real = read_file(
                 "/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (folder, folder))
             time_real = time_real[0:-20]
@@ -46,11 +54,12 @@ for root, dirs, files in walk:
             bpm_est_interp = np.interp(time_real_trim, time, bpm)
 
             error = sklearn.metrics.mean_squared_error(bpm_real_trim, bpm_est_interp)
+            rel_error = relative_error(bpm_est_interp, bpm_real_trim)
 
             plt.figure()
             plt.plot(time_real_trim, bpm_est_interp, time_real_trim, bpm_real_trim)
-            plt.title("%s. MSE: %.2f" % (folder, error))
+            plt.title("%s. MSE: %.2f    Relative error: %.2f%%" % (folder, error, rel_error * 100))
             plt.legend(["estimated", "real"])
             plt.savefig(
-                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/results_raw_cutlow2/%s.png" % folder)
+                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/da_best/%s.png" % folder)
             plt.close()
