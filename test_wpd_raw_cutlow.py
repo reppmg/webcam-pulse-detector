@@ -10,6 +10,8 @@ from read_files import read_file
 from experiments import trim_real
 from transforms import transform
 
+import shutil
+
 path_to_script = '/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/get_pulse.py'
 path_to_python = '/usr/local/bin/python3.7'
 
@@ -20,20 +22,23 @@ for root, dirs, files in walk:
         if file.endswith(".mp4"):
             filename = file.split(".")[0]
             path_to_video = os.path.join(root, file)
-            # sys.argv[0] = '-v %s' % path_to_video
-            # bashCommand = '%s %s -v %s' % (path_to_python, path_to_script, path_to_video)
-            # print(bashCommand)
-            #
-            # process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            # output, error = process.communicate()
-            # print(output)
+            sys.argv[0] = '-v %s' % path_to_video
+            bashCommand = '%s %s -v %s' % (path_to_python, path_to_script, path_to_video)
+            print(bashCommand)
+
+            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+            output, error = process.communicate()
+            print(output)
 
             folder = root.split("/")[-1]
-            out_file = "results_raw_cutlow2/Webcam-pulse-%s-dlib-dots.csv" % filename
+            out_file = "results_raw/Webcam-pulse-%s-dlib-dots.csv" % filename
+            backup_file = "results_raw_cutlow6/Webcam-pulse-%s-dlib-dots.csv" % filename
+
+            shutil.copyfile(out_file, backup_file)
+
             data = pd.read_csv(out_file).to_numpy()
             time, bpm = data[250:, 0], data[250:, 1]
-            time -= time[0] * 0.75
-
+            time -= time[0]
             ot = time.copy()
             op = bpm.copy()
             # time, bpm, alg = transform(time, bpm)
@@ -52,5 +57,5 @@ for root, dirs, files in walk:
             plt.title("%s. MSE: %.2f" % (folder, error))
             plt.legend(["estimated", "real"])
             plt.savefig(
-                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/results_raw_cutlow2/%s.png" % folder)
+                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/results_raw_cutlow6/%s.png" % folder)
             plt.close()

@@ -219,7 +219,7 @@ class getPulseApp(object):
         output_frame = self.processor.frame_out
 
         # show the processed/annotated output frame
-        imshow("Processed", output_frame)
+        # imshow("Processed", output_frame)
 
         # create and/or update the raw data display if needed
         if self.bpm_plot:

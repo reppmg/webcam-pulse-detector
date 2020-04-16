@@ -40,7 +40,7 @@ class findFaceGetPulse(object):
         self.frame_in = np.zeros((10, 10))
         self.frame_out = np.zeros((10, 10))
         self.frame_num = 0
-        self.cutlow = 1
+        self.cutlow = 6
         self.skipped = 0
         self.base_fps = fps
         self.fps = self.base_fps / self.cutlow
