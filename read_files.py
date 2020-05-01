@@ -1,3 +1,5 @@
+import pandas as pd
+
 def read_file(file):
     try:
         lines = open(file, 'r').readlines()
@@ -11,3 +13,9 @@ def read_file(file):
     start_time = time[0]
     time = [i - start_time for i in time]
     return time, bpm
+
+def read_file_mio(file):
+    csv = pd.read_csv(file).to_numpy()
+    times, bpms = csv[:, 0], csv[:, 1]
+    return times, bpms
+

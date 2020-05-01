@@ -40,7 +40,7 @@ class findFaceGetPulse(object):
         self.frame_in = np.zeros((10, 10))
         self.frame_out = np.zeros((10, 10))
         self.frame_num = 0
-        self.cutlow = 6
+        self.cutlow = 1
         self.skipped = 0
         self.base_fps = fps
         self.fps = self.base_fps / self.cutlow
@@ -91,6 +91,8 @@ class findFaceGetPulse(object):
 
         self.right_brow_point = None
         self.left_brow_point = None
+        self.forehead_high = 0.2
+        self.brow_offset = self.forehead_high * 0.3
 
         self.transform = transforms.Compose([ToTensorGjz(), NormalizeGjz(mean=127.5, std=128)])
 
@@ -122,8 +124,8 @@ class findFaceGetPulse(object):
                     int(h * fh_h)]
         left_x, left_y = self.left_brow_point
         right_x, right_y = self.right_brow_point
-        rect_h = 30
-        brow_offset = 10
+        rect_h = h * self.forehead_high
+        brow_offset = self.brow_offset * h
         return [
             int(left_x),
             int(left_y - rect_h - brow_offset),
@@ -203,8 +205,8 @@ class findFaceGetPulse(object):
             cv2.putText(self.frame_out, "Forehead",
                         (x, y), cv2.FONT_HERSHEY_PLAIN, 1.5, col)
             return 1
-        if set(self.face_rect) == set([1, 1, 2, 2]):
-            return
+        # if set(self.face_rect) == set([1, 1, 2, 2]):
+        #     return
         self.face_rect = self.detect_faces()
         cv2.putText(
             self.frame_out, "Press 'C' to change camera (current: %s)" % str(
@@ -359,12 +361,6 @@ class findFaceGetPulse(object):
         return res
 
     def detect_faces(self):
-        # return list(self.face_cascade.detectMultiScale(self.gray,
-        #                                                scaleFactor=1.3,
-        #                                                minNeighbors=4,
-        #                                                minSize=(
-        #                                                    50, 50),
-        #                                                flags=cv2.CASCADE_SCALE_IMAGE))
         np.random.seed(1)
         img_ori = self.frame_in
         net = self.net
@@ -374,7 +370,6 @@ class findFaceGetPulse(object):
         net.setInput(blob)
         outs = net.forward(outputlayers)
         height, width, channels = img_ori.shape
-        rects = []
         for out in outs:
             for detection in out:
                 scores = detection[5:]
@@ -391,27 +386,10 @@ class findFaceGetPulse(object):
                     rect = dlib.rectangle(int(x), int(y), x + w, y + h)
                     np.random.seed(1)
                     pts = self.face_regressor(img_ori, rect).parts()
-                    # pts = np.array([[pt.x, pt.y] for pt in pts]).T
-                    #
-                    # roi_box = parse_roi_box_from_landmark(pts)
-                    #
-                    # img = crop_img(img_ori, roi_box)
-                    # cv2.imshow("web_img", img)
-                    #
-                    # img = cv2.resize(img, dsize=(120, 120), interpolation=cv2.INTER_LINEAR)
-                    # input = self.transform(img).unsqueeze(0)
-                    # with torch.no_grad():
-                    #     param = self.model(input)
-                    #     param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
-                    #
-                    # pts68 = predict_68pts(param, roi_box)
                     pts68 = pts
                     self.left_brow_point = (pts68[19].x, pts68[19].y)
                     self.right_brow_point = (pts68[24].x, pts68[24].y)
 
-                    # for i in range(0, 67):
-                    #     pnt = pts[i].x, pts[i].y
-                    #     cv2.circle(img_ori, pnt, 1, (0, 0, 255), -1)
                     cv2.circle(img_ori, self.left_brow_point, 1, (0, 0, 255), -1)
                     cv2.circle(img_ori, self.right_brow_point, 1, (0, 0, 255), -1)
 
