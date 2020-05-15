@@ -1,3 +1,4 @@
+import os
 import time
 
 from lib.device import Camera
@@ -60,7 +61,11 @@ class getPulseApp(object):
 
         video_file = vars(args)["video"]
         self.is_video = video_file != 0
-        self.dataset_name = "%s-dlib-dots" % video_file.split("/")[-1].split(".")[0]  # str(video_file).split("/")[-2]
+        if self.is_video:
+            self.dataset_name = "%s-dlib-dots" % video_file.split("/")[-1].split(".")[0]  # str(video_file).split("/")[-2]
+        else:
+            self.dataset_name = "cam-dlib-dots"
+        print(self.dataset_name)
         self.source = cv.VideoCapture(video_file)
         self.w, self.h = 0, 0
         self.pressed = 0
@@ -206,6 +211,8 @@ class getPulseApp(object):
             self.write_csv()
             sys.exit(0)
 
+        # frame = cv.rotate(frame, 0)
+
         # display unaltered frame
         # imshow("Original",frame)
 
@@ -219,7 +226,7 @@ class getPulseApp(object):
         output_frame = self.processor.frame_out
 
         # show the processed/annotated output frame
-        imshow("Processed", output_frame)
+        # imshow("Processed", output_frame)
 
         # create and/or update the raw data display if needed
         if self.bpm_plot:
@@ -254,6 +261,7 @@ st = None
 frames = 0
 
 if __name__ == "__main__":
+    # os.chdir("/Users/maksimrepp/PycharmProjects/webcam-pulse-detector")
     parser = argparse.ArgumentParser(description='Webcam pulse detector.')
     parser.add_argument('--serial', default=None,
                         help='serial port destination for bpm data')

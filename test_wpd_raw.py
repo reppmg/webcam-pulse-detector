@@ -25,15 +25,15 @@ for root, dirs, files in walk:
         if file.endswith(".mp4"):
             if "P1H1" not in file:
                 continue
-            filename = file.split(".")[0]
-            path_to_video = os.path.join(root, file)
-            # sys.argv[0] = '-v %s' % path_to_video
-            # bashCommand = '%s %s -v %s' % (path_to_python, path_to_script, path_to_video)
-            # print(bashCommand)
-            #
-            # process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-            # output, error = process.communicate()
-            # print(output)
+            filename = "v_dark2"
+            path_to_video = os.path.join(os.getcwd(), "%s.mp4" % filename)
+            sys.argv[0] = '-v %s' % path_to_video
+            bashCommand = '%s %s -v %s' % (path_to_python, path_to_script, path_to_video)
+            print(bashCommand)
+
+            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+            output, error = process.communicate()
+            print(output)
 
             folder = root.split("/")[-1]
             suffix = "dlib-dots"
@@ -44,7 +44,7 @@ for root, dirs, files in walk:
 
             ot = time.copy()
             op = bpm.copy()
-            time, bpm, alg = transform(time, bpm)
+            # time, bpm, alg = transform(time, bpm)
             time_real, bpm_real = read_file(
                 "/Users/maksimrepp/Documents/nir/public_sheet/%s/%s_Mobi_RR-intervals.bpm" % (folder, folder))
             time_real = time_real[0:-20]
@@ -58,8 +58,8 @@ for root, dirs, files in walk:
 
             plt.figure()
             plt.plot(time_real_trim, bpm_est_interp, time_real_trim, bpm_real_trim)
-            plt.title("%s. MSE: %.2f    Relative error: %.2f%%" % (folder, error, rel_error * 100))
+            plt.title("%s. Noise medium. MSE: %.2f    Relative error: %.2f%%" % (folder, error, rel_error * 100))
             plt.legend(["estimated", "real"])
             plt.savefig(
-                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/da_best/%s.png" % folder)
+                "/Users/maksimrepp/PycharmProjects/webcam-pulse-detector/spoil/%s.png" % filename)
             plt.close()
