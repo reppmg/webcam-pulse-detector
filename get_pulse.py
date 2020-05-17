@@ -174,6 +174,7 @@ class getPulseApp(object):
         self.pressed = waitKey(10) & 255  # wait for keypress for 10 ms
         if self.pressed == 27:  # exit program on 'esc'
             print("Exiting")
+            self.write_csv()
             for cam in self.cameras:
                 cam.cam.release()
             if self.send_serial:
@@ -226,7 +227,7 @@ class getPulseApp(object):
         output_frame = self.processor.frame_out
 
         # show the processed/annotated output frame
-        # imshow("Processed", output_frame)
+        imshow("Processed", output_frame)
 
         # create and/or update the raw data display if needed
         if self.bpm_plot:
