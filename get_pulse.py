@@ -3,7 +3,7 @@ import time
 
 from lib.device import Camera
 from lib.processors_noopenmdao import findFaceGetPulse
-from lib.interface import plotXY, imshow, waitKey, destroyWindowget_
+from lib.interface import plotXY, imshow, waitKey, destroyWindow
 from cv2 import moveWindow
 import cv2 as cv
 import argparse
